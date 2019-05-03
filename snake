@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Snake Game</title>
+</head>
+<body>
+        <link rel="stylesheet" type="text/css" href="nazasnake.css" />
+        <div class="score" id="score">0</div>
+            <canvas id="canvas" height="600px" width="600px"></canvas>
+            <script>
+                var 
+canvas = document.getElementById('canvas'),
+ctx = canvas.getContext('2d'),
+scoreIs = document.getElementById('score'),
+direction = '',
+directionQueue = '',
+fps = 150,
+snake = [],
+snakeLength = 5,
+cellSize = 20,
+snakeColor = 'pink',
+foodColor = 'blue',
+foodX = [],
+foodY = [],
+food = {
+	x: 0, 
+	y: 0
+},
+score = 0,
+hit = new Audio('end.mp3');
+pick = new Audio('snakehit.mp3');
+// pushes possible x and y positions to seperate arrays
+for(i = 0; i <= canvas.width - cellSize; i+=cellSize) {
+	foodX.push(i);
+	foodY.push(i);
+}
+// makes canvas interactive upon load
+canvas.setAttribute('tabindex',1);
+canvas.style.outline = 'none';
+canvas.focus();
+// draws a square.. obviously
+function drawSquare(x,y,color) {
+	ctx.fillStyle = color;
+	ctx.fillRect(x, y, cellSize, cellSize);	
+}
+// giving the food object its coordinates
+function createFood() { 
+	food.x = foodX[Math.floor(Math.random()*foodX.length)]; // random x position from array
+	food.y = foodY[Math.floor(Math.random()*foodY.length)]; // random y position from array
+	// looping through the snake and checking if there is a collision
+	for(i = 0; i < snake.length; i++) {
+		if(checkCollision(food.x, food.y, snake[i].x, snake[i].y)) {
+			createFood(); 
+		}
+	}
+}
+// drawing food on the canvas
+function drawFood() {
+	drawSquare(food.x, food.y, foodColor);
+}
+// setting the colors for the canvas. color1 - the background, color2 - the line color
+function setBackground(color1, color2) {
+	ctx.fillStyle = color1;
+	ctx.strokeStyle = color2;
+
+	ctx.fillRect(0, 0, canvas.height, canvas.width);
+
+	for(var x = 0.5; x < canvas.width; x += cellSize) {
+		ctx.moveTo(x, 0);
+		ctx.lineTo(x, canvas.height);
+	}
+	for(var y = 0.5; y < canvas.height; y += cellSize) {
+		ctx.moveTo(0, y);
+		ctx.lineTo(canvas.width, y);
+	}
+
+	ctx.stroke()
+}
+// creating the snake and pushing coordinates to the array
+function createSnake() {
+	snake = [];
+		for(var i = snakeLength; i > 0; i--) {
+		k = i * cellSize;
+		snake.push({x: k, y:0});
+	}
+}
+// loops through the snake array and draws each element
+function drawSnake() {
+	for(i = 0; i < snake.length; i++) {
+		drawSquare(snake[i].x, snake[i].y, snakeColor);
+	}
+}
+// keyboard interactions | direction != '...' doesn't let the snake go backwards
+function changeDirection(keycode) {
+	if(keycode == 37 && direction != 'right') { directionQueue = 'left'; }
+	else if(keycode == 38 && direction != 'down') { directionQueue = 'up'; }
+	else if(keycode == 39 && direction != 'left') { directionQueue = 'right'; }
+	else if(keycode == 40 && direction != 'top') { directionQueue = 'down' }
+}
+// changing the snake's movement
+function moveSnake() {
+	var x = snake[0].x; // getting the head coordinates...hhehehe... getting head..
+  // anyway... read on...
+	var y = snake[0].y;
+
+	direction = directionQueue;
+
+	if(direction == 'right') {
+		x+=cellSize;
+	}
+	else if(direction == 'left') {
+		x-=cellSize;
+	}
+	else if(direction == 'up') {
+		y-=cellSize;
+	}
+	else if(direction == 'down') {
+		y+=cellSize;
+	}
+	// removes the tail and makes it the new head...very delicate, don't touch this
+	var tail = snake.pop(); 
+	tail.x = x;
+	tail.y = y;
+	snake.unshift(tail);
+}
+// checks if too coordinates match up
+function checkCollision(x1,y1,x2,y2) {
+	if(x1 == x2 && y1 == y2) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+// main game loop
+function game(){
+	var head = snake[0];
+	// checking for wall collisions
+	if(head.x < 0 || head.x > canvas.width - cellSize  || head.y < 0 || head.y > canvas.height - cellSize) {
+		hit.play();
+		setBackground();
+		createSnake();
+		drawSnake();
+		createFood();
+		drawFood();
+		directionQueue = 'right';
+        score = 0;
+        alert('game over');
+	}
+	// checking for colisions with snake's body
+	for(i = 1; i < snake.length; i++) {
+		if(head.x == snake[i].x && head.y == snake[i].y) {
+			hit.play(); // playing sounds
+			setBackground();
+			createSnake();
+			drawSnake();
+			createFood();
+			drawFood();
+			directionQueue = 'right';
+            score = 0;
+            alert('game over');
+		}
+	}
+	// checking for collision with food
+	if(checkCollision(head.x, head.y, food.x, food.y)) {
+		snake[snake.length] = {x: head.x, y: head.y};
+		createFood();
+		drawFood();
+		pick.play();
+		score += 10;
+	}
+
+	canvas.onkeydown = function(evt) {
+		evt = evt || window.event;
+		changeDirection(evt.keyCode);
+	};
+
+   ctx.beginPath();
+   setBackground('#fff', '#eee');
+   scoreIs.innerHTML = score;
+   drawSnake();
+   drawFood();
+   moveSnake();
+}
+function newGame() {
+	direction = 'right'; // initial direction
+	directionQueue = 'right';
+	ctx.beginPath();
+	createSnake();
+	createFood();
+
+	if(typeof loop != 'undefined') {
+		clearInterval(loop);
+	}
+	else {
+		loop = setInterval(game, fps);
+	}
+}
+newGame();
+/**
+ * (Note: Depends on window.requestAnimationFrame for polling.)
+ * 
+ * An experimental Gamepad object for detecting
+ *  and parsing gamepad input.
+ *
+ * Current code borrows heavily from Marcin Wichary's work:
+ * http://www.html5rocks.com/en/tutorials/doodles/gamepad/
+ * 
+ * Also uses deadzone values from
+ * http://msdn.microsoft.com/en-us/library/windows/desktop/ee417001(v=vs.85).aspx
+ * Left Stick: 8689/32767.0
+ * Right Stick: 7849.0/32767.0
+ * Shoulder0: 0.5
+ * Shoulder1: 30.0/255.0
+ *
+ * @property {boolean}  supported                  If gamepads are supported in the current context
+ * @property {boolean}  ticking                    If polling is currently taking place
+ * @property {array}    gamepads                   The currently connected gamepads, if any
+ * @property {float}    SHOULDER0_BUTTON_THRESHOLD The Shoulder0 ('LEFT_SHOULDER') deadzone for when a button is 'pressed'
+ * @property {float}    SHOULDER1_BUTTON_THRESHOLD The Shoulder1 ('LEFT_SHOULDER_BOTTOM') deadzone for when a button is 'pressed'
+ * @property {float}    LEFT_AXIS_THRESHOLD        The left axis deadzone for when an analogue input has 'moved'
+ * @property {float}    RIGHT_AXIS_THRESHOLD       The right axis deadzone for when an analogue input has 'moved'
+ * if(gamepad.supported) {
+ *   if(gamepad.pressed(0, "FACE_1") {
+ *    //Depending on the layout, either 'X', 'A', or 'O' was pressed on the first controller
+ *   }
+ * }
+ */
+ var Gamepad = (function(self) {
+
+self.supported = (navigator.webkitGetGamepads && navigator.webkitGetGamepads()) ||
+				!!navigator.webkitGamepads || !!navigator.mozGamepads ||
+				!!navigator.msGamepads || !!navigator.gamepads ||
+				(navigator.getGamepads && navigator.getGamepads());
+
+self.ticking = false;
+
+var BUTTONS = {
+	FACE_1: 0,
+	FACE_2: 1,
+	FACE_3: 2,
+	FACE_4: 3,
+	LEFT_SHOULDER: 4,
+	RIGHT_SHOULDER: 5,
+	LEFT_SHOULDER_BOTTOM: 6,
+	RIGHT_SHOULDER_BOTTOM: 7,
+	SELECT: 8,
+	START: 9,
+	LEFT_ANALOGUE_STICK: 10,
+	RIGHT_ANALOGUE_STICK: 11,
+	PAD_UP: 12,
+	PAD_DOWN: 13,
+	PAD_LEFT: 14,
+	PAD_RIGHT: 15,
+	CENTER_BUTTON: 16
+};
+
+self.SHOULDER0_BUTTON_THRESHOLD = .5;
+self.SHOULDER1_BUTTON_THRESHOLD = 30.0 / 255.0;
+self.RIGHT_AXIS_THRESHOLD = 7849.0 / 32767.0;
+self.LEFT_AXIS_THRESHOLD = 8689 / 32767.0;
+self.gamepads = [];
+var prevRawGamepadTypes = [];
+var prevTimestamps = [];
+
+if (self.supported) {
+	// Older Firefox 
+	window.addEventListener('MozGamepadConnected',
+					onGamepadConnect, false);
+	window.addEventListener('MozGamepadDisconnected',
+					onGamepadDisconnect, false);
+					
+	//W3C Specification
+	window.addEventListener('gamepadconnected', onGamepadConnect, false);
+	window.addEventListener('gamepaddisconnected', onGamepadDisconnect, false);
+
+	// Chrome
+	if (navigator.webkitGetGamepads && navigator.webkitGetGamepads()) {
+		startPolling();
+	}
+	
+	//CocoonJS
+	if(navigator.getGamepads && navigator.getGamepads()) {
+		startPolling();
+	}
+}
+
+/**
+ * Starts the polling
+ * @private
+ * @see onGamepadConnect
+ */
+function startPolling() {
+	if (!self.ticking) {
+		self.ticking = true;
+		tick();
+	}
+}
+
+/**
+ * Does one 'tick' and prepares for the next
+ * @private
+ * @see pollStatus
+ */
+function tick() {
+	pollStatus();
+	if (self.ticking) {
+		window.requestAnimationFrame(tick);
+	}
+}
+
+/**
+ * Stops the polling
+ * @private
+ */
+function stopPolling() {
+	self.ticking = false;
+}
+
+/**
+ * Compares timestamps for changes
+ * @see pollGamepads()
+ */
+function pollStatus() {
+	pollGamepads();
+	for (var i in self.gamepads) {
+		var gamepad = self.gamepads[i];
+		if (gamepad.timestamp &&
+						(gamepad.timestamp === prevTimestamps[i])) {
+			continue;
+		}
+		prevTimestamps[i] = gamepad.timestamp;
+	}
+}
+
+/**
+ * Polls the navigator.*Gamepads object for all gamepads connected 
+ */
+function pollGamepads() {
+	var rawGamepads =
+					(navigator.webkitGetGamepads && navigator.webkitGetGamepads()) ||
+					navigator.webkitGamepads || navigator.mozGamepads ||
+					navigator.msGamepads || navigator.gamepads || 
+					(navigator.getGamepads && navigator.getGamepads());
+	if (rawGamepads) {
+		self.gamepads = [];
+		for (var i = 0; i < rawGamepads.length; i++) {
+			if (typeof rawGamepads[i] !== prevRawGamepadTypes[i]) {
+				prevRawGamepadTypes[i] = typeof rawGamepads[i];
+			}
+			if (rawGamepads[i]) {
+				self.gamepads.push(rawGamepads[i]);
+			}
+		}
+	}
+}
+/**
+ * Returns if a specific button on a certain gamepad was pressed
+ * @param {number} pad  The Gamepad to check
+ * @param {string} buttonId The button to check
+ * @returns {boolean} If the button on the specific gamepad is currently pressed
+ */
+self.pressed = function(pad, buttonId) {
+	if (self.gamepads[pad] && BUTTONS[buttonId]) {
+		var buttonIndex = BUTTONS[buttonId];
+		if (buttonIndex === 4 || buttonIndex === 5) {
+			return self.gamepads[pad].buttons[buttonIndex] > self.SHOULDER0_BUTTON_THRESHOLD;
+		} else if (buttonIndex === 6 || buttonIndex === 7) {
+			return self.gamepads[pad].buttons[buttonIndex] > self.SHOULDER1_BUTTON_THRESHOLD;
+		} else {
+			return self.gamepads[pad].buttons[buttonIndex] > 0.5;
+		}
+	} else {
+		return false;
+	}
+};
+
+/**
+ * Returns the amount of movement from the deadzone (-1 to 1)
+ * @param {number} pad  The Gamepad to check
+ * @param {string} axisId The axis and dimension to check
+ * @returns {number} The amount of movement, if any
+ */
+self.moved = function(pad, axisId) {
+	if (self.gamepads[pad]) {
+		if (axisId === "LEFT_X") {
+			if (self.gamepads[pad].axes[0] < -self.LEFT_AXIS_THRESHOLD ||
+							self.gamepads[pad].axes[0] > self.LEFT_AXIS_THRESHOLD) {
+				return self.gamepads[pad].axes[0];
+			}
+		} else if (axisId === "LEFT_Y") {
+			if (self.gamepads[pad].axes[1] < -self.LEFT_AXIS_THRESHOLD ||
+							self.gamepads[pad].axes[1] > self.LEFT_AXIS_THRESHOLD) {
+				return self.gamepads[pad].axes[1];
+			}
+		} else if (axisId === "RIGHT_X") {
+			if (self.gamepads[pad].axes[2] < -self.RIGHT_AXIS_THRESHOLD ||
+							self.gamepads[pad].axes[2] > self.RIGHT_AXIS_THRESHOLD) {
+				return self.gamepads[pad].axes[2];
+			}
+		} else if (axisId === "RIGHT_Y") {
+			if (self.gamepads[pad].axes[3] < -self.RIGHT_AXIS_THRESHOLD ||
+							self.gamepads[pad].axes[3] > self.RIGHT_AXIS_THRESHOLD) {
+				return self.gamepads[pad].axes[3];
+			}
+		}
+	} else {
+		return 0;
+	}
+};
+/**
+ * Adds a gamepad when connected and starts the polling
+ * @param {EventObject} event A 'MozGamepadConnected' or 'gamepadconnected' event object
+ */
+function onGamepadConnect(event) {
+	var gamepad = event.gamepad;
+	self.gamepads[event.gamepad.id] = gamepad;
+	self.startPolling();
+}
+
+/**
+ * Sets a disconnected gamepad to 'null'
+ * @param {EventObject} event A 'MozGamepadDisconnected' or 'gamepaddisconnected' event object
+ */
+function onGamepadDisconnect(event) {
+	self.gamepads[event.gamepad.id] = null;
+	if (self.gamepads.length === 0) {
+		stopPolling();
+	}
+}
+
+return self;
+
+})(Gamepad || {});
+            </script>
+        </body>
+        </html>
